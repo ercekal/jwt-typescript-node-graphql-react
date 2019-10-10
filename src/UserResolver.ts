@@ -4,6 +4,7 @@ import { User } from "./entity/User";
 import { MyContext } from "./MyContext";
 import { createRefreshToken, createAccessToken } from "./auth";
 import { isAuth } from "./isAuthMiddleware";
+import { sendRefreshToken } from "./sendRefreshToken";
 
 @ObjectType()
 class LoginResponse {
@@ -66,12 +67,7 @@ export class UserResolver {
       throw new Error('password is not correct')
     }
 
-    res.cookie('jid',
-    createRefreshToken(user),
-    {
-      httpOnly: true
-    }
-    )
+		sendRefreshToken(res, createAccessToken(user))
 
     return {
       accessToken: createAccessToken(user)
