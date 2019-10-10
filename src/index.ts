@@ -7,7 +7,7 @@ import { UserResolver } from './UserResolver';
 import { createConnection } from "typeorm";
 import { verify } from "jsonwebtoken";
 import { User } from "./entity/User";
-import { createAccessToken } from "./auth";
+import { createAccessToken, createRefreshToken } from "./auth";
 import { sendRefreshToken } from "./sendRefreshToken";
 
 ( async () => {
@@ -16,27 +16,32 @@ import { sendRefreshToken } from "./sendRefreshToken";
 	app.get('/', (_req, res) => res.send('hello'))
 
 
-	app.post('/refresh_token', async (req, res) => {
-		const token = req.cookies.jid
-		if (!token) {
-			return res.send({ok: false, accessToken: ''})
-		}
-		let payload: any = null
-		try {
-			console.log('verify(token, process.env.REFRESH_TOKEN_SECRET!): ', verify(token, process.env.REFRESH_TOKEN_SECRET!));
-			payload = verify(token, process.env.REFRESH_TOKEN_SECRET!)
-			// return res.send({ok: true, accessToken: 'v '})
-		} catch (error) {
-			console.log('error: ', error);
-			return res.send({ok: false, accessToken: ''})
-		}
-		const user = await User.findOne({id: payload.userId})
-		if (!user) {
-			return res.send({ok: false, accessToken: ''})
-		}
-		sendRefreshToken(res, createAccessToken(user))
-		return res.send({ok: true, accessToken: createAccessToken(user)})
-	})
+	app.post("/refresh_token", async (req, res) => {
+    const token = req.cookies.jid;
+    if (!token) {
+      return res.send({ ok: false, accessToken: "" });
+    }
+
+    let payload: any = null;
+    try {
+      payload = verify(token, process.env.REFRESH_TOKEN_SECRET!);
+    } catch (err) {
+      console.log(err);
+      return res.send({ ok: false, accessToken: "" });
+    }
+
+    // token is valid and
+    // we can send back an access token
+    const user = await User.findOne({ id: payload.userId });
+
+    if (!user) {
+      return res.send({ ok: false, accessToken: "" });
+    }
+
+    sendRefreshToken(res, createRefreshToken(user));
+
+    return res.send({ ok: true, accessToken: createAccessToken(user) });
+  });
 	await createConnection();
 
 	const apolloServer = new ApolloServer({
